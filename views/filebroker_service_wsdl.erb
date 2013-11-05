@@ -1,0 +1,134 @@
+<?xml version="1.0"?>
+<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://nordea.com/filebroker_service" xmlns:filebroker="http://nordea.com/filebroker" targetNamespace="http://nordea.com/filebroker_service" xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">
+  <wsdl:types>
+    <xs:schema xmlns="http://nordea.com/filebroker" xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://nordea.com/filebroker" attributeFormDefault="qualified" elementFormDefault="qualified">
+      <xs:include schemaLocation="./filebroker_service.xsd"/>
+    </xs:schema>
+  </wsdl:types>
+
+  <wsdl:message name="CollectionTransferRequestMessage">
+    <wsdl:part name="parameter" element="filebroker:CollectionTransferRequest"/>
+  </wsdl:message>
+
+  <wsdl:message name="CollectionTransferResponseMessage">
+    <wsdl:part name="parameter" element="filebroker:CollectionTransferResponse"/>
+  </wsdl:message>
+
+  <wsdl:message name="CollectionStatusRequestMessage">
+    <wsdl:part name="parameter" element="filebroker:CollectionStatusRequest"/>
+  </wsdl:message>
+
+  <wsdl:message name="CollectionStatusResponseMessage">
+    <wsdl:part name="parameter" element="filebroker:CollectionStatusResponse"/>
+  </wsdl:message>
+
+  <wsdl:message name="LogRequestMessage">
+    <wsdl:part name="parameter" element="filebroker:LogRequest"/>
+  </wsdl:message>
+
+  <wsdl:message name="LogResponseMessage">
+    <wsdl:part name="parameter" element="filebroker:LogResponse"/>
+  </wsdl:message>
+
+  <wsdl:message name="ListRequestMessage">
+    <wsdl:part name="parameter" element="filebroker:ListRequest"/>
+  </wsdl:message>
+
+  <wsdl:message name="ListResponseMessage">
+    <wsdl:part name="parameter" element="filebroker:ListResponse"/>
+  </wsdl:message>
+
+  <wsdl:message name="ServiceStatusRequestMessage">
+    <wsdl:part name="parameter" element="filebroker:ServiceStatusRequest"/>
+  </wsdl:message>
+
+  <wsdl:message name="ServiceStatusResponseMessage">
+    <wsdl:part name="parameter" element="filebroker:ServiceStatusResponse"/>
+  </wsdl:message>
+
+  <wsdl:portType name="FileBrokerPortType">
+    <wsdl:operation name="CollectionTransfer">
+      <wsdl:input message="tns:CollectionTransferRequestMessage"/>
+      <wsdl:output message="tns:CollectionTransferResponseMessage"/>
+    </wsdl:operation>
+
+    <wsdl:operation name="CollectionStatus">
+      <wsdl:input message="tns:CollectionStatusRequestMessage"/>
+      <wsdl:output message="tns:CollectionStatusResponseMessage"/>
+    </wsdl:operation>
+
+    <wsdl:operation name="List">
+      <wsdl:input message="tns:ListRequestMessage"/>
+      <wsdl:output message="tns:ListResponseMessage"/>
+    </wsdl:operation>
+
+    <wsdl:operation name="ServiceStatus">
+      <wsdl:input message="tns:ServiceStatusRequestMessage"/>
+      <wsdl:output message="tns:ServiceStatusResponseMessage"/>
+    </wsdl:operation>
+
+    <wsdl:operation name="Log">
+      <wsdl:input message="tns:LogRequestMessage"/>
+      <wsdl:output message="tns:LogResponseMessage"/>
+    </wsdl:operation>
+  </wsdl:portType>
+
+  <wsdl:binding name="FileBrokerBinding" type="tns:FileBrokerPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <wsdl:operation name="CollectionTransfer">
+      <soap:operation soapAction="<%= url %>/filebroker_service#CollectionTransfer"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="CollectionStatus">
+      <soap:operation soapAction="<%= url %>/filebroker_service#CollectionStatus"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="Log">
+      <soap:operation soapAction="<%= url %>/filebroker_service#Log"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="List">
+      <soap:operation soapAction="<%= url %>/filebroker_service#List"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+
+    <wsdl:operation name="ServiceStatus">
+      <soap:operation soapAction="<%= url %>/filebroker_service#ServiceStatus"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+
+  <wsdl:service name="FileBrokerService">
+    <wsdl:port name="FileBrokerPort" binding="tns:FileBrokerBinding">
+      <soap:address location="<%= url %>/filebroker_service"/>
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>
