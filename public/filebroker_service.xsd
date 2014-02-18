@@ -1352,6 +1352,7 @@
       <xs:element name="Login" type="xs:string" minOccurs="1" maxOccurs="1" />
       <xs:element name="Password" type="xs:string" minOccurs="0" maxOccurs="1" />
       <xs:element name="Path" type="xs:string" minOccurs="1" maxOccurs="1" />
+      <xs:element name="FilterOutTransferred" type="xs:boolean" minOccurs="0" maxOccurs="1" />
     </xs:sequence>
   </xs:complexType>
 

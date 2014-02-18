@@ -503,12 +503,15 @@ class Database
   end
 
   def insert_file_status(transfer_id, file, status_id, status_time)
-    @db.exec("INSERT into fb_file_status (transfer_id, filename, status_id, status_time) VALUES (#{transfer_id}, '#{file}', #{status_id}, '#{status_time}')")
+    sql = "INSERT into fb_file_status (transfer_id, filename, status_id, status_time) VALUES ($1::int, $2::text, $3::int, $4::timestamp)"
+    @db.exec(sql, [transfer_id, file, status_id, status_time])
   end
 
   def update_file_status(transfer_id, file, status_id, status_time)
-    if @db.exec("SELECT * FROM fb_file_status WHERE transfer_id=#{transfer_id} AND filename='#{file}'").count > 0
-      @db.exec("UPDATE fb_file_status SET status_id=#{status_id}, status_time='#{status_time}' WHERE transfer_id=#{transfer_id} AND filename='#{file}'")
+    sql_count = "SELECT * FROM fb_file_status WHERE transfer_id=$1::int AND filename=$2::text"
+    if @db.exec(sql_count, [transfer_id, file]).count > 0
+      sql_update = "UPDATE fb_file_status SET status_id=$1::int, status_time=$2::timestamp WHERE transfer_id=$3::int AND filename=$4::text"
+      @db.exec(sql_update, [status_id, status_time, transfer_id, file])
     else
       insert_file_status(transfer_id, file, status_id, status_time)
     end
@@ -553,6 +556,23 @@ class Database
 
   def select_running_transfers_by_source(status_id, source_id, source_path)
     @db.exec("SELECT fb_transfer.transfer_id FROM fb_transfer, fb_transfer_status WHERE fb_transfer.source_id=#{source_id} AND fb_transfer_status.status_id=#{status_id} AND fb_transfer.source_path='#{source_path}' AND fb_transfer.transfer_id=fb_transfer_status.transfer_id")
+  end
+
+  def select_files_by_transfer_status(status_id, source_id, source_path, file_name)
+    sql = "
+    SELECT 
+      fb_transfer.transfer_id, 
+      fb_file_status.filename,
+      fb_file_status.status_time
+    FROM 
+        fb_transfer, fb_transfer_status, public.fb_file_status
+    WHERE fb_transfer.source_id = $1::bigint 
+      AND fb_transfer_status.status_id = $2::int
+      AND fb_transfer.source_path = $3::text
+      AND fb_transfer.transfer_id = fb_transfer_status.transfer_id
+      AND fb_file_status.filename = $4::text
+      AND fb_file_status.transfer_id = fb_transfer.transfer_id"
+    @db.exec(sql, [source_id, status_id, source_path, file_name])
   end
 
   def select_running_transfers
@@ -745,9 +765,9 @@ class Database
       public.fb_file_status_dict
     WHERE
       fb_file_status.status_id = fb_file_status_dict.status_id AND
-      fb_file_status.transfer_id = #{transfer_id}
+      fb_file_status.transfer_id = $1::int
     ORDER BY fb_file_status.filename ASC"
-    @db.exec(sql)
+    @db.exec(sql, [transfer_id])
   end
 
   def add_client(client)

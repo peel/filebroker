@@ -1228,6 +1228,7 @@ class FBService < Sinatra::Base
       req['login'] 		= soap_body.xpath("//#{prefix}:Login/text()").to_s
       req['password'] = soap_body.xpath("//#{prefix}:Password/text()").to_s
       req['path'] 		= soap_body.xpath("//#{prefix}:Path/text()").to_s
+      req['filter_out_transferred'] = soap_body.xpath("//#{prefix}:FilterOutTransferred/text()").to_s
 
       begin
         source = @db.select_account(req)
@@ -1269,12 +1270,19 @@ class FBService < Sinatra::Base
       # Convert time format
       list.map { |j| j['mtime'] = DateTime.parse(j['mtime']) }
 
-      # Remove currently transferred files
+      # Remove currently transferring files
       @db.select_running_transfers_by_source(FBService::TRANSFER_RUNNING, source['account_id'], source['path']).each { |i|
         @db.select_transfer_files(i['transfer_id']).each { |j|
           list.delete_if { |k| k['name'] == j['filename'] }
         }
       }
+
+      # Remove already transferred files - optional depends on FilterOutTransferred option
+      if source['filter_out_transferred'] == 'true'
+        list.delete_if { |k| 
+          @db.select_files_by_transfer_status(FBService::TRANSFER_COMPLETED_SUCCESSFULLY, source['account_id'], source['path'], k['name']).ntuples() > 0
+        }
+      end
 
       # Remove temporary files
       list.delete_if { |j| j['name'] =~ /\.partial$/ }
