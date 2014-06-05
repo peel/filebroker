@@ -1,3 +1,8 @@
+#
+# FileBroker - FileBrokerService
+# (c) 2010-2013 Jakub Zubielik <jakub.zubielik@nordea.com>
+#
+
 class FBService < Sinatra::Base
   # File status
   FAILED_TO_ARCHIVE_FILE				= 1
@@ -44,13 +49,13 @@ class FBService < Sinatra::Base
   module SoapFault
     class MustUnderstandError < StandardError
       def fault_code
-	      'MustUnderstand'
+        'MustUnderstand'
       end
     end
 
     class ClientError < StandardError
       def fault_code
-	      'Client'
+        'Client'
       end
     end
   end
@@ -69,7 +74,7 @@ class FBService < Sinatra::Base
   end
 
   def initialize(*args)
-	  GC.enable
+    GC.enable
 
     @avs	= AVScanner.new
     @db   = Database.new
@@ -82,17 +87,17 @@ class FBService < Sinatra::Base
 
     @fb_shutdown = false
     do_quit = Proc.new {
-	    @fb_shutdown = true
-	    @threads.each { |t| t.join }
-	    sleep 0.5 while @threads.length > 0
-	    Rack::Handler::WEBrick.shutdown
-	    File.delete("#{File.dirname(__FILE__)}/../tmp/filebroker.pid")
+      @fb_shutdown = true
+      @threads.each { |t| t.join }
+      sleep 0.5 while @threads.length > 0
+      Rack::Handler::WEBrick.shutdown
+      File.delete("#{File.dirname(__FILE__)}/../tmp/filebroker.pid")
     }
 
     Signal.trap('SIGTERM', do_quit)
     Signal.trap('SIGQUIT', do_quit)
     Signal.trap('SIGINT',  do_quit)
-	  Signal.trap('CLD', 'IGNORE')
+    Signal.trap('CLD', 'IGNORE')
 
     super
   end
@@ -101,24 +106,24 @@ class FBService < Sinatra::Base
   post '/filebroker_service' do
     begin
 
-	    GC.enable
-	    GC.start
+      GC.enable
+      GC.start
 
-	    soap_message = Nokogiri::XML(request.body.read)
+      soap_message = Nokogiri::XML(request.body.read)
       soap_body = @xslt.transform(soap_message)
       errors = @xsd.validate(soap_body).map{ |e| e.message }.join(', ')
       raise(SoapFault::ClientError, errors) unless errors == ''
 
       if @db.select_configuration('debug') == 'true'
-	      log_msg = soap_message.to_s
-	      log_msg = log_msg.gsub(/assword\>.+<\/.*assword\>/, "#{$1}******#{$2}") if log_msg =~ /(assword\>).+(<\/.*assword\>)/
-	      log_msg = log_msg.to_s.gsub(/PasswordDigest\"\>.+<\/.*assword\>/, "#{$1}******#{$2}") if log_msg =~ /(PasswordDigest\"\>).+(<\/.*assword\>)/
-	      log_msg = log_msg.to_s.gsub(/PasswordText\"\>.+<\/.*assword\>/, "#{$1}******#{$2}") if log_msg =~ /(PasswordText\"\>).+(<\/.*assword\>)/
+        log_msg = soap_message.to_s
+        log_msg = log_msg.gsub(/assword>.+<\/.*assword>/, "#{$1}******#{$2}")              if log_msg =~ /(assword>).+(<\/.*assword>)/
+        log_msg = log_msg.to_s.gsub(/PasswordDigest">.+<\/.*assword>/, "#{$1}******#{$2}") if log_msg =~ /(PasswordDigest">).+(<\/.*assword>)/
+        log_msg = log_msg.to_s.gsub(/PasswordText">.+<\/.*assword>/, "#{$1}******#{$2}")   if log_msg =~ /(PasswordText">).+(<\/.*assword>)/
 
-	      log_path = "#{File.dirname(__FILE__)}/../log/#{soap_operation_to_method(soap_body).to_s.gsub(/^do_/, '')}/#{Time.new.strftime("%Y-%m-%d")}/"
-	      FileUtils.mkdir_p(log_path) if !Dir.exist?(log_path)
-				log_name = "#{soap_operation_to_method(soap_body).to_s.gsub(/^do_/, '')}-#{DateTime.parse(Time.now.to_s)}-#{Digest::MD5.hexdigest(soap_body.to_s + rand(Time.now().to_i).to_s)}.log"
-				File.open("#{log_path}/#{log_name}", 'w') { |log| log.puts log_msg }
+        log_path = "#{File.dirname(__FILE__)}/../log/#{soap_operation_to_method(soap_body).to_s.gsub(/^do_/, '')}/#{Time.new.strftime("%Y-%m-%d")}/"
+        FileUtils.mkdir_p(log_path) if !Dir.exist?(log_path)
+        log_name = "#{soap_operation_to_method(soap_body).to_s.gsub(/^do_/, '')}-#{DateTime.parse(Time.now.to_s)}-#{Digest::MD5.hexdigest(soap_body.to_s + rand(Time.now().to_i).to_s)}.log"
+        File.open("#{log_path}/#{log_name}", 'w') { |log| log.puts log_msg }
       end
 
       if soap_message.root.at_xpath('//soap:Header/*[@soap:mustUnderstand="1" and not(@soap:actor)]', 'soap' => 'http://schemas.xmlsoap.org/soap/envelope/')
@@ -153,18 +158,18 @@ class FBService < Sinatra::Base
         @stderr_mutex.lock
         STDERR.puts "- -> Received request message type: #{soap_operation_to_method(soap_body).to_s}"
         @stderr_mutex.unlock
-	      self.send(soap_operation_to_method(soap_body), soap_body)
+        self.send(soap_operation_to_method(soap_body), soap_body)
       end
     rescue
-			err_msg = "#{$!.backtrace.join("\n")}\n#{$!.message}\n"
-	    @stderr_mutex.try_lock
-	    80.times { STDERR.print '-' }
-	    STDERR.puts
-			STDERR.puts "Exception time: #{DateTime.parse(Time.now.to_s)}"
-	    STDERR.puts err_msg
-	    80.times { STDERR.print '-' }
-	    STDERR.puts
-	    @stderr_mutex.unlock
+      err_msg = "#{$!.backtrace.join("\n")}\n#{$!.message}\n"
+      @stderr_mutex.try_lock
+      80.times { STDERR.print '-' }
+      STDERR.puts
+      STDERR.puts "Exception time: #{DateTime.parse(Time.now.to_s)}"
+      STDERR.puts err_msg
+      80.times { STDERR.print '-' }
+      STDERR.puts
+      @stderr_mutex.unlock
 
       fault_code = $!.respond_to?(:fault_code) ? $!.fault_code : 'Server'
       builder(:fault, :locals => { :fault_string => err_msg, :fault_code => fault_code })
@@ -257,7 +262,6 @@ class FBService < Sinatra::Base
 
       @threads << Thread.new {
         begin
-
           err = File.open("log/transfer/#{transfer['transfer_id']}.log", 'w')
           err.sync = true
           err.puts "Trace file for transfer request: #{transfer['transfer_id']}"
@@ -448,7 +452,7 @@ class FBService < Sinatra::Base
           # Process files
           #
 
-          files_remove = files_download
+          files_remove = files_download.dup
           files_download.each { |file|
 
             #
@@ -521,20 +525,20 @@ class FBService < Sinatra::Base
                 next
               end
             elsif transfer['options']['dec_method'] =~ /des-blb/
-							begin
-								key = File.open("etc/keys/#{transfer['options']['dec_key_id']}.key", 'r').readlines.first.strip
-								@sys.exec("sbin/des-blb-i386 -D -u -k '#{key}' process/#{transfer['transfer_id']}/#{file} process/#{transfer['transfer_id']}/#{file}.dec")
-								File.rename("process/#{transfer['transfer_id']}/#{file}.dec", "process/#{transfer['transfer_id']}/#{file}")
-							rescue
-								err.puts "Exception raised at: #{Time.now.to_s}"
-								err.puts $!.backtrace
-								err.puts $!.message
-								@db.update_file_status(transfer_id, file, FBService::FAILED_TO_DECRYPT_FILE, DateTime.now)
-								File.unlink("process/#{transfer['transfer_id']}/#{file}.dec") if File.exist?("process/#{transfer['transfer_id']}/#{file}.dec")
-								File.unlink("process/#{transfer['transfer_id']}/#{file}") if File.exist?("process/#{transfer['transfer_id']}/#{file}")
+              begin
+                key = File.open("etc/keys/#{transfer['options']['dec_key_id']}.key", 'r').readlines.first.strip
+                @sys.exec("sbin/des-blb-i386 -D -u -k '#{key}' process/#{transfer['transfer_id']}/#{file} process/#{transfer['transfer_id']}/#{file}.dec")
+                File.rename("process/#{transfer['transfer_id']}/#{file}.dec", "process/#{transfer['transfer_id']}/#{file}")
+              rescue
+                err.puts "Exception raised at: #{Time.now.to_s}"
+                err.puts $!.backtrace
+                err.puts $!.message
+                @db.update_file_status(transfer_id, file, FBService::FAILED_TO_DECRYPT_FILE, DateTime.now)
+                File.unlink("process/#{transfer['transfer_id']}/#{file}.dec") if File.exist?("process/#{transfer['transfer_id']}/#{file}.dec")
+                File.unlink("process/#{transfer['transfer_id']}/#{file}") if File.exist?("process/#{transfer['transfer_id']}/#{file}")
                 files_remove.delete_if { |t| t == file }
                 next
-							end
+              end
             end
 
 
@@ -552,6 +556,7 @@ class FBService < Sinatra::Base
                 err.puts $!.message
                 @db.update_file_status(transfer_id, file, FBService::FAILED_TO_DECOMPRESS_FILE, DateTime.now)
                 File.unlink("process/#{transfer['transfer_id']}/#{file}") if File.exist?("process/#{transfer['transfer_id']}/#{file}")
+                files_remove.delete_if { |t| t == file }
                 next
               end
             end
@@ -605,7 +610,6 @@ class FBService < Sinatra::Base
             if transfer['options']['encoding_from'] != '' and transfer['options']['encoding_to'] != ''
               begin
                 @sys.iconv("process/#{transfer['transfer_id']}/#{file}", transfer['options']['encoding_from'], transfer['options']['encoding_to'], true)
-                @sys.archive(transfer['transfer_id'], file)
                 @db.update_file_status(transfer_id, file, FBService::FILE_ENCODED, DateTime.now)
               rescue
                 err.puts "Exception raised at: #{Time.now.to_s}"
@@ -667,24 +671,24 @@ class FBService < Sinatra::Base
               end
             }
           elsif transfer['options']['enc_method'] =~ /des/
-	          files_compress = Dir.entries("process/#{transfer['transfer_id']}")
-	          files_compress.each { |file|
-		          next if File.directory?(file)
-		          next if file == transfer['options']['md5'].split('/').last
+            files_compress = Dir.entries("process/#{transfer['transfer_id']}")
+            files_compress.each { |file|
+              next if File.directory?(file)
+              next if file == transfer['options']['md5'].split('/').last
 
-		          begin
-			          @sys.exec("openssl enc -e -#{transfer['options']['enc_method']} -kfile etc/keys/#{transfer['options']['enc_key_id']}.key -in process/#{transfer['transfer_id']}/#{file} -out process/#{transfer['transfer_id']}/#{file}.enc")
-			          File.rename("process/#{transfer['transfer_id']}/#{file}.enc", "process/#{transfer['transfer_id']}/#{file}")
-		          rescue
-			          err.puts "Exception raised at: #{Time.now.to_s}"
-			          err.puts $!.backtrace
-			          err.puts $!.message
-			          @db.update_file_status(transfer_id, file, FBService::FAILED_TO_ENCRYPT_FILE, DateTime.now)
-			          File.unlink("process/#{transfer['transfer_id']}/#{file}.enc") if File.exist?("process/#{transfer['transfer_id']}/#{file}.enc")
-			          File.unlink("process/#{transfer['transfer_id']}/#{file}") if File.exist?("process/#{transfer['transfer_id']}/#{file}")
+              begin
+                @sys.exec("openssl enc -e -#{transfer['options']['enc_method']} -kfile etc/keys/#{transfer['options']['enc_key_id']}.key -in process/#{transfer['transfer_id']}/#{file} -out process/#{transfer['transfer_id']}/#{file}.enc")
+                File.rename("process/#{transfer['transfer_id']}/#{file}.enc", "process/#{transfer['transfer_id']}/#{file}")
+              rescue
+                err.puts "Exception raised at: #{Time.now.to_s}"
+                err.puts $!.backtrace
+                err.puts $!.message
+                @db.update_file_status(transfer_id, file, FBService::FAILED_TO_ENCRYPT_FILE, DateTime.now)
+                File.unlink("process/#{transfer['transfer_id']}/#{file}.enc") if File.exist?("process/#{transfer['transfer_id']}/#{file}.enc")
+                File.unlink("process/#{transfer['transfer_id']}/#{file}") if File.exist?("process/#{transfer['transfer_id']}/#{file}")
                 files_remove.delete_if { |t| t == file }
-		          end
-	          }
+              end
+            }
           end
 
           #
@@ -692,27 +696,27 @@ class FBService < Sinatra::Base
           #
 
           if transfer['options']['md5'] != ''
-	          files_compress = Dir.entries("process/#{transfer['transfer_id']}")
-	          files_compress.each { |file|
-		          next if File.directory?(file)
-		          next if file == transfer['options']['md5'].split('/').last
+            files_md5 = Dir.entries("process/#{transfer['transfer_id']}")
+            files_md5.each { |file|
+              next if File.directory?(file)
+              next if file == transfer['options']['md5'].split('/').last
 
-		          begin
-			          cur_md5 = Digest::MD5.new()
-			          File.open("process/#{transfer['transfer_id']}/#{file}", 'r').each_line { |l| cur_md5 << l }
+              begin
+                cur_md5 = Digest::MD5.new()
+                File.open("process/#{transfer['transfer_id']}/#{file}", 'r').each_line { |l| cur_md5 << l }
 
-			          File.open("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}", 'a') { |f|
-				          f << "#{cur_md5}  #{file}\n"
-			          }
-		          rescue
-			          err.puts "Exception raised at: #{Time.now.to_s}"
-			          err.puts $!.backtrace
-			          err.puts $!.message
-			          @db.update_file_status(transfer_id, file, FBService::FAILED_TO_CALCULATE_MD5, DateTime.now)
-			          File.unlink("process/#{transfer['transfer_id']}/#{file}")
-			          next
-		          end
-	          }
+                File.open("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}", 'a') { |f|
+                  f << "#{cur_md5}  #{file}\n"
+                }
+              rescue
+                err.puts "Exception raised at: #{Time.now.to_s}"
+                err.puts $!.backtrace
+                err.puts $!.message
+                @db.update_file_status(transfer_id, file, FBService::FAILED_TO_CALCULATE_MD5, DateTime.now)
+                File.unlink("process/#{transfer['transfer_id']}/#{file}")
+                next
+              end
+            }
           end
 
           #
@@ -746,14 +750,14 @@ class FBService < Sinatra::Base
               next if File.directory?(file)
 
               begin
-								if transfer['options']['direct_upload'] == 'true'
-									trg_conn.put("process/#{transfer['transfer_id']}/#{file}", "#{transfer['target']['path']}/#{file}") if transfer['options']['filename_suffix'] == ''
-									trg_conn.put("process/#{transfer['transfer_id']}/#{file}", "#{transfer['target']['path']}/#{file}#{transfer['options']['filename_suffix']}") if transfer['options']['filename_suffix'] != ''
-								else
-									trg_conn.put("process/#{transfer['transfer_id']}/#{file}", "#{transfer['target']['path']}/#{file}.partial")
-									trg_conn.rename("#{transfer['target']['path']}/#{file}.partial", "#{transfer['target']['path']}/#{file}") if transfer['options']['filename_suffix'] == ''
-									trg_conn.rename("#{transfer['target']['path']}/#{file}.partial", "#{transfer['target']['path']}/#{file}#{transfer['options']['filename_suffix']}") if transfer['options']['filename_suffix'] != ''
-								end
+                if transfer['options']['direct_upload'] == 'true'
+                  trg_conn.put("process/#{transfer['transfer_id']}/#{file}", "#{transfer['target']['path']}/#{file}") if transfer['options']['filename_suffix'] == ''
+                  trg_conn.put("process/#{transfer['transfer_id']}/#{file}", "#{transfer['target']['path']}/#{file}#{transfer['options']['filename_suffix']}") if transfer['options']['filename_suffix'] != ''
+                else
+                  trg_conn.put("process/#{transfer['transfer_id']}/#{file}", "#{transfer['target']['path']}/#{file}.partial")
+                  trg_conn.rename("#{transfer['target']['path']}/#{file}.partial", "#{transfer['target']['path']}/#{file}") if transfer['options']['filename_suffix'] == ''
+                  trg_conn.rename("#{transfer['target']['path']}/#{file}.partial", "#{transfer['target']['path']}/#{file}#{transfer['options']['filename_suffix']}") if transfer['options']['filename_suffix'] != ''
+                end
 
                 @db.update_file_status(transfer_id, file, FBService::FILE_UPLOADED, DateTime.now)
               rescue
@@ -762,35 +766,36 @@ class FBService < Sinatra::Base
                 err.puts $!.message
                 @db.update_file_status(transfer_id, file, FBService::FAILED_TO_UPLOAD_FILE, DateTime.now)
                 File.unlink("process/#{transfer['transfer_id']}/#{file}") if File.exist?("process/#{transfer['transfer_id']}/#{file}")
-								files_remove.delete_if { |t| t == file }
+                files_remove.delete_if { |t| t == file }
+                files_remove.delete_if { |t| t == file.gsub(/\.gpg/, '') }
                 next
               end
             }
 
 
-            if transfer['options']['md5'] != ''
+            if transfer['options']['md5'] != '' and files_remove.length > 0
               begin
-	              if transfer['options']['direct_upload'] == 'true'
-		              if transfer['options']['filename_suffix'] == ''
-			              trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
-			                           "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}")
-		              else
-			              trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
-			                           "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}#{transfer['options']['filename_suffix']}")
-		              end
-	              else
-		              if transfer['options']['filename_suffix'] == ''
-			              trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
-			                           "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial")
-			              trg_conn.rename("#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial",
-			                              "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}")
-		              else
-			              trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
-			                           "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial")
-			              trg_conn.rename("#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial",
-			                              "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}#{transfer['options']['filename_suffix']}")
-		              end
-	              end
+                if transfer['options']['direct_upload'] == 'true'
+                  if transfer['options']['filename_suffix'] == ''
+                    trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
+                                 "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}")
+                  else
+                    trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
+                                 "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}#{transfer['options']['filename_suffix']}")
+                  end
+                else
+                  if transfer['options']['filename_suffix'] == ''
+                    trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
+                                 "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial")
+                    trg_conn.rename("#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial",
+                                    "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}")
+                  else
+                    trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
+                                 "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial")
+                    trg_conn.rename("#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial",
+                                    "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}#{transfer['options']['filename_suffix']}")
+                  end
+                end
                 @db.update_file_status(transfer_id, transfer['options']['md5'].split('/').last, FBService::MD5_FILE_UPLOADED, DateTime.now)
               rescue
                 err.puts "Exception raised at: #{Time.now.to_s}"
@@ -827,7 +832,7 @@ class FBService < Sinatra::Base
               next if File.directory?(file)
 
               begin
-	              if transfer['options']['direct_upload'] == 'true'
+                if transfer['options']['direct_upload'] == 'true'
                   # EXCEPTION FOR MVS - OMIT PATH AND PUT FILENAME IN ''
                   #trg_conn.put("process/#{transfer['transfer_id']}/#{file}", "#{transfer['target']['path']}/#{file}") if transfer['options']['filename_suffix'] == ''
                   #if transfer['options']['filename_suffix'] != ''
@@ -837,13 +842,13 @@ class FBService < Sinatra::Base
                   if transfer['options']['filename_suffix'] != ''
                     trg_conn.put("process/#{transfer['transfer_id']}/#{file}", "'#{file}#{transfer['options']['filename_suffix']}'")
                   end
-	              else
-		              trg_conn.put("process/#{transfer['transfer_id']}/#{file}", "#{transfer['target']['path']}/#{file}.partial")
-		              trg_conn.rename("#{transfer['target']['path']}/#{file}.partial", "#{transfer['target']['path']}/#{file}") if transfer['options']['filename_suffix'] == ''
-		              if transfer['options']['filename_suffix'] != ''
-			              trg_conn.rename("#{transfer['target']['path']}/#{file}.partial", "#{transfer['target']['path']}/#{file}#{transfer['options']['filename_suffix']}")
-		              end
-	              end
+                else
+                  trg_conn.put("process/#{transfer['transfer_id']}/#{file}", "#{transfer['target']['path']}/#{file}.partial")
+                  trg_conn.rename("#{transfer['target']['path']}/#{file}.partial", "#{transfer['target']['path']}/#{file}") if transfer['options']['filename_suffix'] == ''
+                  if transfer['options']['filename_suffix'] != ''
+                    trg_conn.rename("#{transfer['target']['path']}/#{file}.partial", "#{transfer['target']['path']}/#{file}#{transfer['options']['filename_suffix']}")
+                  end
+                end
 
                 @db.update_file_status(transfer_id, file, FBService::FILE_UPLOADED, DateTime.now)
               rescue
@@ -852,34 +857,35 @@ class FBService < Sinatra::Base
                 err.puts $!.message
                 @db.update_file_status(transfer_id, file, FBService::FAILED_TO_UPLOAD_FILE, DateTime.now)
                 File.unlink("process/#{transfer['transfer_id']}/#{file}") if File.exist?("process/#{transfer['transfer_id']}/#{file}")
-								files_remove.delete_if { |t| t == file }
+                files_remove.delete_if { |t| t == file }
+                files_remove.delete_if { |t| t == file.gsub(/\.gpg/, '') }
                 next
               end
             }
 
-            if transfer['options']['md5'] != ''
+            if transfer['options']['md5'] != '' and files_remove.length > 0
               begin
-	              if transfer['options']['direct_upload'] == 'true'
-		              if transfer['options']['filename_suffix'] == ''
-			              trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
-			                           "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}")
-		              else
-			              trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
-			                           "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}#{transfer['options']['filename_suffix']}")
-		              end
-	              else
-		              if transfer['options']['filename_suffix'] == ''
-			              trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
-			                           "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial")
-			              trg_conn.rename("#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial",
-			                              "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}")
-		              else
-			              trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
-			                           "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial")
-			              trg_conn.rename("#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial",
-			                              "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}#{transfer['options']['filename_suffix']}")
-		              end
-	              end
+                if transfer['options']['direct_upload'] == 'true'
+                  if transfer['options']['filename_suffix'] == ''
+                    trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
+                                 "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}")
+                  else
+                    trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
+                                 "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}#{transfer['options']['filename_suffix']}")
+                  end
+                else
+                  if transfer['options']['filename_suffix'] == ''
+                    trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
+                                 "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial")
+                    trg_conn.rename("#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial",
+                                    "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}")
+                  else
+                    trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
+                                 "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial")
+                    trg_conn.rename("#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial",
+                                    "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}#{transfer['options']['filename_suffix']}")
+                  end
+                end
                 @db.update_file_status(transfer_id, transfer['options']['md5'].split('/').last, FBService::MD5_FILE_UPLOADED, DateTime.now)
               rescue
                 err.puts "Exception raised at: #{Time.now.to_s}"
@@ -911,54 +917,55 @@ class FBService < Sinatra::Base
               next if File.directory?(file)
 
               begin
-	              if transfer['options']['direct_upload'] == 'true'
-		              trg_conn.put("process/#{transfer['transfer_id']}/#{file}", "#{transfer['target']['path']}/#{file}") if transfer['options']['filename_suffix'] == ''
-		              if transfer['options']['filename_suffix'] != ''
-			              trg_conn.put("process/#{transfer['transfer_id']}/#{file}", "#{transfer['target']['path']}/#{file}#{transfer['options']['filename_suffix']}")
-		              end
-	              else
-		              trg_conn.put("process/#{transfer['transfer_id']}/#{file}", "#{transfer['target']['path']}/#{file}.partial")
-		              trg_conn.rename("#{transfer['target']['path']}/#{file}.partial", "#{transfer['target']['path']}/#{file}") if transfer['options']['filename_suffix'] == ''
-		              if transfer['options']['filename_suffix'] != ''
-			              trg_conn.rename("#{transfer['target']['path']}/#{file}.partial", "#{transfer['target']['path']}/#{file}#{transfer['options']['filename_suffix']}")
-		              end
-	              end
+                if transfer['options']['direct_upload'] == 'true'
+                  trg_conn.put("process/#{transfer['transfer_id']}/#{file}", "#{transfer['target']['path']}/#{file}") if transfer['options']['filename_suffix'] == ''
+                  if transfer['options']['filename_suffix'] != ''
+                    trg_conn.put("process/#{transfer['transfer_id']}/#{file}", "#{transfer['target']['path']}/#{file}#{transfer['options']['filename_suffix']}")
+                  end
+                else
+                  trg_conn.put("process/#{transfer['transfer_id']}/#{file}", "#{transfer['target']['path']}/#{file}.partial")
+                  trg_conn.rename("#{transfer['target']['path']}/#{file}.partial", "#{transfer['target']['path']}/#{file}") if transfer['options']['filename_suffix'] == ''
+                  if transfer['options']['filename_suffix'] != ''
+                    trg_conn.rename("#{transfer['target']['path']}/#{file}.partial", "#{transfer['target']['path']}/#{file}#{transfer['options']['filename_suffix']}")
+                  end
+                end
 
-	              @db.update_file_status(transfer_id, file, FBService::FILE_UPLOADED, DateTime.now)
+                @db.update_file_status(transfer_id, file, FBService::FILE_UPLOADED, DateTime.now)
               rescue
                 err.puts "Exception raised at: #{Time.now.to_s}"
                 err.puts $!.backtrace
                 err.puts $!.message.to_s
                 @db.update_file_status(transfer_id, file, FBService::FAILED_TO_UPLOAD_FILE, DateTime.now)
                 File.unlink("process/#{transfer['transfer_id']}/#{file}") if File.exist?("process/#{transfer['transfer_id']}/#{file}")
-								files_remove.delete_if { |t| t == file }
+                files_remove.delete_if { |t| t == file }
+                files_remove.delete_if { |t| t == file.gsub(/\.gpg/, '') }
                 next
               end
             }
 
-            if transfer['options']['md5'] != ''
+            if transfer['options']['md5'] != '' and files_remove.length > 0
               begin
-	              if transfer['options']['direct_upload'] == 'true'
-		              if transfer['options']['filename_suffix'] == ''
-			              trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
-			                           "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}")
-		              else
-			              trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
-			                           "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}#{transfer['options']['filename_suffix']}")
-		              end
-	              else
-		              if transfer['options']['filename_suffix'] == ''
-			              trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
-			                           "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial")
-			              trg_conn.rename("#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial",
-			                              "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}")
-		              else
-			              trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
-			                           "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial")
-			              trg_conn.rename("#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial",
-			                              "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}#{transfer['options']['filename_suffix']}")
-		              end
-	              end
+                if transfer['options']['direct_upload'] == 'true'
+                  if transfer['options']['filename_suffix'] == ''
+                    trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
+                                 "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}")
+                  else
+                    trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
+                                 "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}#{transfer['options']['filename_suffix']}")
+                  end
+                else
+                  if transfer['options']['filename_suffix'] == ''
+                    trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
+                                 "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial")
+                    trg_conn.rename("#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial",
+                                    "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}")
+                  else
+                    trg_conn.put("process/#{transfer['transfer_id']}/#{transfer['options']['md5'].split('/').last}",
+                                 "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial")
+                    trg_conn.rename("#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}.partial",
+                                    "#{transfer['target']['path']}/#{transfer['options']['md5'].split('/').last}#{transfer['options']['filename_suffix']}")
+                  end
+                end
                 @db.update_file_status(transfer_id, transfer['options']['md5'].split('/').last, FBService::MD5_FILE_UPLOADED, DateTime.now)
               rescue
                 err.puts "Exception raised at: #{Time.now.to_s}"
@@ -1009,7 +1016,7 @@ class FBService < Sinatra::Base
                 end
               }
 
-              if transfer['options']['md5'] != ''
+              if transfer['options']['md5'] != '' and files_remove.length > 0
                 begin
                   src_conn.remove(transfer['options']['md5'])
                   @db.update_file_status(transfer_id, File.split(transfer['options']['md5']).last, FBService::MD5_FILE_REMOVED, DateTime.now)
@@ -1052,7 +1059,7 @@ class FBService < Sinatra::Base
                 end
               }
 
-              if transfer['options']['md5'] != ''
+              if transfer['options']['md5'] != '' and files_remove.length > 0
                 begin
                   src_conn.remove(transfer['options']['md5'])
                   @db.update_file_status(transfer_id, File.split(transfer['options']['md5']).last, FBService::MD5_FILE_REMOVED, DateTime.now)
@@ -1095,7 +1102,7 @@ class FBService < Sinatra::Base
                 end
               }
 
-              if transfer['options']['md5'] != ''
+              if transfer['options']['md5'] != '' and files_remove.length > 0
                 begin
                   src_conn.remove(transfer['options']['md5'])
                   @db.update_file_status(transfer_id, File.split(transfer['options']['md5']).last, FBService::MD5_FILE_REMOVED, DateTime.now)
@@ -1116,7 +1123,7 @@ class FBService < Sinatra::Base
                 file['status_id'].to_i == FBService::FILE_REMOVED or
                 file['status_id'].to_i == FBService::MD5_FILE_UPLOADED or
                 file['status_id'].to_i == FBService::MD5_FILE_REMOVED
-                @db.update_file_status(transfer_id, file['filename'], FBService::TRANSFER_COMPLETED, DateTime.now)
+              @db.update_file_status(transfer_id, file['filename'], FBService::TRANSFER_COMPLETED, DateTime.now)
             end
           }
 
@@ -1126,20 +1133,20 @@ class FBService < Sinatra::Base
           got_errors = false
           @db.select_file_status(transfer_id).each { |file|
             got_errors = true if  file['status_id'].to_i == FBService::FAILED_TO_ARCHIVE_FILE or
-                                  file['status_id'].to_i == FBService::FAILED_TO_COMPRESS_FILE or
-                                  file['status_id'].to_i == FBService::FAILED_TO_DECOMPRESS_FILE or
-                                  file['status_id'].to_i == FBService::FAILED_TO_DECRYPT_FILE or
-                                  file['status_id'].to_i == FBService::FAILED_TO_DOWNLOAD_MD5_FILE or
-                                  file['status_id'].to_i == FBService::FAILED_TO_DOWNLOAD_FILE or
-                                  file['status_id'].to_i == FBService::FAILED_TO_ENCRYPT_FILE or
-                                  file['status_id'].to_i == FBService::FAILED_TO_REMOVE_FILE or
-                                  file['status_id'].to_i == FBService::FAILED_TO_REMOVE_MD5_FILE or
-                                  file['status_id'].to_i == FBService::FAILED_TO_UPLOAD_FILE or
-                                  file['status_id'].to_i == FBService::FAILED_TO_UPLOAD_MD5_FILE or
-                                  file['status_id'].to_i == FBService::FAILED_TO_VERIFY_MD5 or
-                                  file['status_id'].to_i == FBService::MALICIOUS_CODE_DETECTED or
-                                  file['status_id'].to_i == FBService::FAILED_TO_ENCODE_FILE or
-                                  file['status_id'].to_i == FBService::FAILED_TO_CALCULATE_MD5
+                file['status_id'].to_i == FBService::FAILED_TO_COMPRESS_FILE or
+                file['status_id'].to_i == FBService::FAILED_TO_DECOMPRESS_FILE or
+                file['status_id'].to_i == FBService::FAILED_TO_DECRYPT_FILE or
+                file['status_id'].to_i == FBService::FAILED_TO_DOWNLOAD_MD5_FILE or
+                file['status_id'].to_i == FBService::FAILED_TO_DOWNLOAD_FILE or
+                file['status_id'].to_i == FBService::FAILED_TO_ENCRYPT_FILE or
+                file['status_id'].to_i == FBService::FAILED_TO_REMOVE_FILE or
+                file['status_id'].to_i == FBService::FAILED_TO_REMOVE_MD5_FILE or
+                file['status_id'].to_i == FBService::FAILED_TO_UPLOAD_FILE or
+                file['status_id'].to_i == FBService::FAILED_TO_UPLOAD_MD5_FILE or
+                file['status_id'].to_i == FBService::FAILED_TO_VERIFY_MD5 or
+                file['status_id'].to_i == FBService::MALICIOUS_CODE_DETECTED or
+                file['status_id'].to_i == FBService::FAILED_TO_ENCODE_FILE or
+                file['status_id'].to_i == FBService::FAILED_TO_CALCULATE_MD5
           }
 
           @db.update_transfer_status(transfer_id, FBService::TRANSFER_COMPLETED_SUCCESSFULLY, DateTime.now) if !got_errors
@@ -1163,6 +1170,7 @@ class FBService < Sinatra::Base
       @stderr_mutex.try_lock
       80.times { STDERR.print '-' }
       STDERR.puts
+      STDERR.puts "Transfer ID: #{transfer['transfer_id']}"
       STDERR.puts "Exception time: #{DateTime.parse(Time.now.to_s)}"
       STDERR.puts err_msg
       80.times { STDERR.print '-' }
@@ -1220,6 +1228,7 @@ class FBService < Sinatra::Base
       req['login'] 		= soap_body.xpath("//#{prefix}:Login/text()").to_s
       req['password'] = soap_body.xpath("//#{prefix}:Password/text()").to_s
       req['path'] 		= soap_body.xpath("//#{prefix}:Path/text()").to_s
+      req['filter_out_transferred'] = soap_body.xpath("//#{prefix}:FilterOutTransferred/text()").to_s
 
       begin
         source = @db.select_account(req)
@@ -1261,12 +1270,19 @@ class FBService < Sinatra::Base
       # Convert time format
       list.map { |j| j['mtime'] = DateTime.parse(j['mtime']) }
 
-      # Remove currently transferred files
+      # Remove currently transferring files
       @db.select_running_transfers_by_source(FBService::TRANSFER_RUNNING, source['account_id'], source['path']).each { |i|
         @db.select_transfer_files(i['transfer_id']).each { |j|
           list.delete_if { |k| k['name'] == j['filename'] }
         }
       }
+
+      # Remove already transferred files - optional depends on FilterOutTransferred option
+      if source['filter_out_transferred'] == 'true'
+        list.delete_if { |k| 
+          @db.select_files_by_transfer_status(FBService::TRANSFER_COMPLETED_SUCCESSFULLY, source['account_id'], source['path'], k['name']).ntuples() > 0
+        }
+      end
 
       # Remove temporary files
       list.delete_if { |j| j['name'] =~ /\.partial$/ }
@@ -1331,5 +1347,4 @@ class FBService < Sinatra::Base
       builder(:fault, :locals => { :fault_string => 'failed to get log', :fault_code => 'Server' })
     end
   end
-
 end
