@@ -469,6 +469,7 @@ class FBService < Sinatra::Base
                 err.puts $!.message
                 @db.update_file_status(transfer_id, file, FBService::FAILED_TO_ARCHIVE_FILE, DateTime.now)
                 File.unlink("process/#{transfer['transfer_id']}/#{file}")
+                files_remove.delete_if { |t| t == file }
               end
             end
 
