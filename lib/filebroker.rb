@@ -355,8 +355,12 @@ class FBService < Sinatra::Base
             }
 
             src_conn.disconnect
-          elsif transfer['source']['protocol'] == 'ftp'
-            src_conn = Connector::FTP.new
+          elsif transfer['source']['protocol'] == 'ftp' or transfer['source']['protocol'] == 'ftp_mvs'
+            if transfer['source']['protocol'] == 'ftp_mvs'
+              src_conn = Connector::MvsFTP.new
+            else
+              src_conn = Connector::FTP.new
+            end
             src_conn.address 	= transfer['source']['address']
             src_conn.port 		= transfer['source']['port']
             src_conn.login 		= transfer['source']['login']
@@ -807,7 +811,7 @@ class FBService < Sinatra::Base
             end
 
             trg_conn.disconnect
-          elsif transfer['target']['protocol'] == 'ftp'
+          elsif transfer['target']['protocol'] == 'ftp' or transfer['target']['protocol'] == 'ftp_mvs'
             trg_conn = Connector::FTP.new
             trg_conn.address 	= transfer['target']['address']
             trg_conn.port 		= transfer['target']['port']
@@ -1030,7 +1034,7 @@ class FBService < Sinatra::Base
               end
 
               src_conn.disconnect
-            elsif transfer['source']['protocol'] == 'ftp'
+            elsif transfer['source']['protocol'] == 'ftp' or transfer['source']['protocol'] == 'ftp_mvs'
               src_conn = Connector::FTP.new
               src_conn.address 	= transfer['source']['address']
               src_conn.port 		= transfer['source']['port']
@@ -1248,8 +1252,12 @@ class FBService < Sinatra::Base
         conn.cd(req['path'])
         list = conn.list(req['path'])
         conn.disconnect
-      elsif req['protocol'] == 'ftp'
-        conn = Connector::FTP.new
+      elsif req['protocol'] == 'ftp' or req['protocol'] == 'ftp_mvs'
+        if req['protocol'] == 'ftp_mvs'
+          conn = Connector::MvsFTP.new
+        else
+          conn = Connector::FTP.new
+        end
         conn.address 	= req['address']
         conn.port 		= req['port']
         conn.login 		= req['login']

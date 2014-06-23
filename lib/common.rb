@@ -139,7 +139,7 @@ class System
         self.exec("bzip2 -d 'process/#{transfer_id}/#{file}'")
       elsif file =~ /\.gz$/
         self.exec("gzip -d 'process/#{transfer_id}/#{file}'")
-      elsif file =~ /\.zip$/
+      elsif file =~ /\.zip$/ or file =~ /\.ZIP$/
         self.exec("unzip -o 'process/#{transfer_id}/#{file}' -d 'process/#{transfer_id}'")
       else
         raise DecompressionFailed, 'unknown archive type'
@@ -555,7 +555,8 @@ class Database
   end
 
   def select_running_transfers_by_source(status_id, source_id, source_path)
-    @db.exec("SELECT fb_transfer.transfer_id FROM fb_transfer, fb_transfer_status WHERE fb_transfer.source_id=#{source_id} AND fb_transfer_status.status_id=#{status_id} AND fb_transfer.source_path='#{source_path}' AND fb_transfer.transfer_id=fb_transfer_status.transfer_id")
+    sql = "SELECT fb_transfer.transfer_id FROM fb_transfer, fb_transfer_status WHERE fb_transfer.source_id=$1::bigint AND fb_transfer_status.status_id=$2::int AND fb_transfer.source_path=$3::text AND fb_transfer.transfer_id=fb_transfer_status.transfer_id"
+    @db.exec(sql, [source_id, status_id, source_path])
   end
 
   def select_files_by_transfer_status(status_id, source_id, source_path, file_name)
@@ -1142,6 +1143,78 @@ class Connector
         msg = $!.to_s
         raise Connector::NoSuchFileOrDirectory, "no such file: #{path}" if $!.to_s =~ /no such file/
         raise "cannot get file list: #{msg}"
+      end
+    end
+  end
+
+  # Implements FTP protocol that can be used with MVS filesystem, commonly used on z/OS Mainframes.
+  class MvsFTP < Connector::FTP
+
+    def get(src, dst)
+      mvspath = "'" + src.split('/')[-1] + "'"
+      super(mvspath, dst)
+    end
+
+    def list(path)
+      begin
+        items = []
+        @ftp.list("'" + path + "'").each { |e|
+          i = {}
+          item = Connector::MvsFTP::FTPListZos.parse(e)
+          next unless item and item.file?
+          i['name']  = item.name
+          i['size']  = item.size
+          i['mtime'] = Time.at(Time.parse(item.mtime.to_s).to_i).to_s
+          items << i
+        }
+        return items.sort { |a, b| a['name'] <=> b['name'] }
+      rescue
+        msg = $!.to_s
+        raise Connector::NoSuchFileOrDirectory, "no MVS record: #{path}" if $!.to_s =~ /No data sets found/
+        raise "cannot get MVS record list: #{msg}"
+      end
+    end
+
+    # Parse MVS like FTP LIST entries.
+    #
+    # == MATCHES
+    #
+    #   Volume Unit    Referred Ext Used Recfm Lrecl BlkSz Dsorg Dsname
+    #   PRI008 3390   2014/06/17  2  705  VB     400 27920  PS  'DG140531'
+    #   PRI009 3390   2014/06/17  2  255  FB   32760 32760  PS  'DG140531.ZIP'
+    class FTPListZos < Net::FTP::List::Parser
+
+      REGEXP = %r{
+      (\w+)\s+
+        (\w+)\s+
+        ([0-9]{4}/[0-9]{2}/[0-9]{2})\s+
+        (\w+)\s+
+        (\w+)\s+
+        (\w+)\s+
+        (\w+)\s+
+        (\d+)\s+
+        (\w+)\s+
+        '([\w.]+)'
+      }x
+
+      # Parse a MVS FTP LIST entry.
+      def self.parse(raw)
+        match = REGEXP.match(raw.strip) or return false
+
+        mtime = DateTime.strptime(match[3], '%Y/%m/%d')
+
+        used = match[5].to_i
+        blksz = match[8].to_i
+        filesize = used * blksz
+
+        emit_entry(
+          raw,
+          :basename => match[10],
+          :mtime => mtime,
+          :file => true,
+          :dir => false,
+          :filesize => filesize
+        )
       end
     end
   end
