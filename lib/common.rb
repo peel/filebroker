@@ -1197,24 +1197,39 @@ class Connector
         '([\w.]+)'
       }x
 
+      REGEXP_MIGRATED = %r{
+      (Migrated)\s+
+        '([\w.]+)'
+      }x
+
       # Parse a MVS FTP LIST entry.
       def self.parse(raw)
-        match = REGEXP.match(raw.strip) or return false
+        match = REGEXP.match(raw.strip)
 
-        mtime = DateTime.strptime(match[3], '%Y/%m/%d')
+        if match
+          mtime = DateTime.strptime(match[3], '%Y/%m/%d')
 
-        used = match[5].to_i
-        blksz = match[8].to_i
-        filesize = used * blksz
+          used = match[5].to_i
+          blksz = match[8].to_i
+          filesize = used * blksz
 
-        emit_entry(
-          raw,
-          :basename => match[10],
-          :mtime => mtime,
-          :file => true,
-          :dir => false,
-          :filesize => filesize
-        )
+          emit_entry(
+            raw,
+            :basename => match[10],
+            :mtime => mtime,
+            :file => true,
+            :dir => false,
+            :filesize => filesize
+          )
+        else
+          match = REGEXP_MIGRATED.match(raw.strip) or return false
+          emit_entry(
+            raw,
+            :basename => match[2],
+            :file => true,
+            :dir => false,
+          )
+        end
       end
     end
   end
