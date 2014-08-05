@@ -1179,6 +1179,7 @@
       <xs:pattern value="[Cc][Ii][Ff][Ss]" />
       <xs:pattern value="[Ff][Tt][Pp]" />
       <xs:pattern value="[Ss][Ff][Tt][Pp]" />
+      <xs:pattern value="[Ff][Tt][Pp]_[Mm][Vv][Ss]" />
       <!--<xs:enumeration value="cifs" />-->
       <!--<xs:enumeration value="ftp" />-->
       <!--<xs:enumeration value="sftp" />-->
