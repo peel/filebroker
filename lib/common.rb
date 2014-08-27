@@ -1046,12 +1046,13 @@ class Connector
   end
 
   class FTP
-    attr_accessor :address, :port, :login, :password, :presite, :postsite, :passive, :text, :binary
+    attr_accessor :address, :port, :login, :password, :presite, :postsite, :passive, :text, :binary, :open_timeout
 
     def connect
       begin
         @ftp = Net::FTP.new
         @ftp.debug_mode = false
+        @ftp.open_timeout = @open_timeout
         @ftp.connect(@address, @port)
         @ftp.login(@login, @password)
         @ftp.passive = true if @passive == 'true'
