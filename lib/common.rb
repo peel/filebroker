@@ -566,12 +566,11 @@ class Database
       fb_file_status.filename,
       fb_file_status.status_time
     FROM 
-        fb_transfer, fb_transfer_status, public.fb_file_status
+        fb_transfer, public.fb_file_status
     WHERE fb_transfer.source_id = $1::bigint 
-      AND fb_transfer_status.status_id = $2::int
       AND fb_transfer.source_path = $3::text
-      AND fb_transfer.transfer_id = fb_transfer_status.transfer_id
       AND fb_file_status.filename = $4::text
+      AND fb_file_status.status_id = $2::int
       AND fb_file_status.transfer_id = fb_transfer.transfer_id"
     @db.exec(sql, [source_id, status_id, source_path, file_name])
   end

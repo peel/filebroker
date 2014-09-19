@@ -1297,7 +1297,7 @@ class FBService < Sinatra::Base
       # Remove already transferred files - optional depends on FilterOutTransferred option
       if source['filter_out_transferred'] == 'true'
         list.delete_if { |k| 
-          @db.select_files_by_transfer_status(FBService::TRANSFER_COMPLETED_SUCCESSFULLY, source['account_id'], source['path'], k['name']).ntuples() > 0
+          @db.select_files_by_transfer_status(FBService::TRANSFER_COMPLETED, source['account_id'], source['path'], k['name']).ntuples() > 0
         }
       end
 
