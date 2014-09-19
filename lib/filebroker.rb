@@ -1037,7 +1037,11 @@ class FBService < Sinatra::Base
 
               src_conn.disconnect
             elsif transfer['source']['protocol'] == 'ftp' or transfer['source']['protocol'] == 'ftp_mvs'
-              src_conn = Connector::FTP.new
+              if transfer['source']['protocol'] == 'ftp_mvs'
+                src_conn = Connector::MvsFTP.new
+              else
+                src_conn = Connector::FTP.new
+              end
               src_conn.address 	= transfer['source']['address']
               src_conn.port 		= transfer['source']['port']
               src_conn.login 		= transfer['source']['login']
