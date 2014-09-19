@@ -1046,12 +1046,13 @@ class Connector
   end
 
   class FTP
-    attr_accessor :address, :port, :login, :password, :presite, :postsite, :passive, :text, :binary
+    attr_accessor :address, :port, :login, :password, :presite, :postsite, :passive, :text, :binary, :open_timeout
 
     def connect
       begin
         @ftp = Net::FTP.new
         @ftp.debug_mode = false
+        @ftp.open_timeout = @open_timeout
         @ftp.connect(@address, @port)
         @ftp.login(@login, @password)
         @ftp.passive = true if @passive == 'true'
@@ -1151,7 +1152,7 @@ class Connector
   class MvsFTP < Connector::FTP
 
     def get(src, dst)
-      mvspath = "'" + src.split('/')[-1] + "'"
+      mvspath = get_mvspath(src)
       super(mvspath, dst)
     end
 
@@ -1173,6 +1174,15 @@ class Connector
         raise Connector::NoSuchFileOrDirectory, "no MVS record: #{path}" if $!.to_s =~ /No data sets found/
         raise "cannot get MVS record list: #{msg}"
       end
+    end
+
+    def remove(file)
+      mvspath = get_mvspath(file)
+      super(mvspath)
+    end
+
+    def get_mvspath(src)
+        return "'" + src.split('/')[-1] + "'"
     end
 
     # Parse MVS like FTP LIST entries.
