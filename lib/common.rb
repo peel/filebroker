@@ -566,12 +566,11 @@ class Database
       fb_file_status.filename,
       fb_file_status.status_time
     FROM 
-        fb_transfer, fb_transfer_status, public.fb_file_status
+        fb_transfer, public.fb_file_status
     WHERE fb_transfer.source_id = $1::bigint 
-      AND fb_transfer_status.status_id = $2::int
       AND fb_transfer.source_path = $3::text
-      AND fb_transfer.transfer_id = fb_transfer_status.transfer_id
       AND fb_file_status.filename = $4::text
+      AND fb_file_status.status_id = $2::int
       AND fb_file_status.transfer_id = fb_transfer.transfer_id"
     @db.exec(sql, [source_id, status_id, source_path, file_name])
   end
@@ -1046,12 +1045,13 @@ class Connector
   end
 
   class FTP
-    attr_accessor :address, :port, :login, :password, :presite, :postsite, :passive, :text, :binary
+    attr_accessor :address, :port, :login, :password, :presite, :postsite, :passive, :text, :binary, :open_timeout
 
     def connect
       begin
         @ftp = Net::FTP.new
         @ftp.debug_mode = false
+        @ftp.open_timeout = @open_timeout
         @ftp.connect(@address, @port)
         @ftp.login(@login, @password)
         @ftp.passive = true if @passive == 'true'
@@ -1151,7 +1151,7 @@ class Connector
   class MvsFTP < Connector::FTP
 
     def get(src, dst)
-      mvspath = "'" + src.split('/')[-1] + "'"
+      mvspath = get_mvspath(src)
       super(mvspath, dst)
     end
 
@@ -1173,6 +1173,15 @@ class Connector
         raise Connector::NoSuchFileOrDirectory, "no MVS record: #{path}" if $!.to_s =~ /No data sets found/
         raise "cannot get MVS record list: #{msg}"
       end
+    end
+
+    def remove(file)
+      mvspath = get_mvspath(file)
+      super(mvspath)
+    end
+
+    def get_mvspath(src)
+        return "'" + src.split('/')[-1] + "'"
     end
 
     # Parse MVS like FTP LIST entries.

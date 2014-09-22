@@ -370,6 +370,7 @@ class FBService < Sinatra::Base
             src_conn.text 		= transfer['source']['text']
             src_conn.presite 	= transfer['source']['presite']
             src_conn.postsite = transfer['source']['postsite']
+            src_conn.open_timeout = @db.select_configuration('ftp_open_timeout').to_i
 
             begin
               src_conn.connect
@@ -822,6 +823,7 @@ class FBService < Sinatra::Base
             trg_conn.text 		= transfer['target']['text']
             trg_conn.presite 	= transfer['target']['presite']
             trg_conn.postsite = transfer['target']['postsite']
+            trg_conn.open_timeout = @db.select_configuration('ftp_open_timeout').to_i
 
             begin
               trg_conn.connect
@@ -1035,11 +1037,16 @@ class FBService < Sinatra::Base
 
               src_conn.disconnect
             elsif transfer['source']['protocol'] == 'ftp' or transfer['source']['protocol'] == 'ftp_mvs'
-              src_conn = Connector::FTP.new
+              if transfer['source']['protocol'] == 'ftp_mvs'
+                src_conn = Connector::MvsFTP.new
+              else
+                src_conn = Connector::FTP.new
+              end
               src_conn.address 	= transfer['source']['address']
               src_conn.port 		= transfer['source']['port']
               src_conn.login 		= transfer['source']['login']
               src_conn.password = transfer['source']['password']
+              src_conn.open_timeout = @db.select_configuration('ftp_open_timeout').to_i
 
               begin
                 src_conn.connect
@@ -1262,6 +1269,7 @@ class FBService < Sinatra::Base
         conn.port 		= req['port']
         conn.login 		= req['login']
         conn.password = req['password']
+        conn.open_timeout = @db.select_configuration('ftp_open_timeout').to_i
         conn.connect
         list = conn.list(req['path'])
         conn.disconnect
@@ -1289,7 +1297,7 @@ class FBService < Sinatra::Base
       # Remove already transferred files - optional depends on FilterOutTransferred option
       if source['filter_out_transferred'] == 'true'
         list.delete_if { |k| 
-          @db.select_files_by_transfer_status(FBService::TRANSFER_COMPLETED_SUCCESSFULLY, source['account_id'], source['path'], k['name']).ntuples() > 0
+          @db.select_files_by_transfer_status(FBService::TRANSFER_COMPLETED, source['account_id'], source['path'], k['name']).ntuples() > 0
         }
       end
 
