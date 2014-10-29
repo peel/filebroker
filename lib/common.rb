@@ -559,7 +559,7 @@ class Database
     @db.exec(sql, [source_id, status_id, source_path])
   end
 
-  def select_files_by_transfer_status(status_id, source_id, source_path, file_name)
+  def select_files_by_transfer_status(status_id, source_id, source_path, file_name, alt_file_name)
     sql = "
     SELECT 
       fb_transfer.transfer_id, 
@@ -569,10 +569,10 @@ class Database
         fb_transfer, public.fb_file_status
     WHERE fb_transfer.source_id = $1::bigint 
       AND fb_transfer.source_path = $3::text
-      AND fb_file_status.filename = $4::text
+      AND (fb_file_status.filename = $4::text OR fb_file_status.filename = $5::text)
       AND fb_file_status.status_id = $2::int
       AND fb_file_status.transfer_id = fb_transfer.transfer_id"
-    @db.exec(sql, [source_id, status_id, source_path, file_name])
+    @db.exec(sql, [source_id, status_id, source_path, file_name, alt_file_name])
   end
 
   def select_running_transfers

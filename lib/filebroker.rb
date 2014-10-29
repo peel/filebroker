@@ -1294,10 +1294,10 @@ class FBService < Sinatra::Base
         }
       }
 
-      # Remove already transferred files - optional depends on FilterOutTransferred option
+      # Remove already transferred files - optional depends on FilterOutTransferred option, potential *.gpg files included
       if source['filter_out_transferred'] == 'true'
         list.delete_if { |k| 
-          @db.select_files_by_transfer_status(FBService::TRANSFER_COMPLETED, source['account_id'], source['path'], k['name']).ntuples() > 0
+          @db.select_files_by_transfer_status(FBService::TRANSFER_COMPLETED, source['account_id'], source['path'], k['name'], k['name'] + '.gpg').ntuples() > 0
         }
       end
 
