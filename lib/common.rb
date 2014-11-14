@@ -1562,7 +1562,7 @@ class Connector
           next if words.length > 7 and words[(words.length - 7)].split('').include?('D')
 
 
-          file  = line[0..(line.length - 40)].strip
+          file  = words[0...(words.length-7)].join(" ")
           size  = words[(words.length - 6)]
           mtime = Time.at(Time.parse((words[(words.length - 5)..(words.length - 1)]).join(' ')).to_i).to_s
 
