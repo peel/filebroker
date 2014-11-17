@@ -1561,8 +1561,15 @@ class Connector
           words = line.split(' ')
           next if words.length > 7 and words[(words.length - 7)].split('').include?('D')
 
+          def getcolumn(file)
+            if file[file.length-7]=='A' # checks whether listing contains marking for datatype
+              file[0...(file.length-7)].join(" ")
+            else
+              file[0..(file.length-6)].join(" ")
+            end
+          end
 
-          file  = words[0...(words.length-7)].join(" ")
+          file  = getcolumn(words)
           size  = words[(words.length - 6)]
           mtime = Time.at(Time.parse((words[(words.length - 5)..(words.length - 1)]).join(' ')).to_i).to_s
 
