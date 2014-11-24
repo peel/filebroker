@@ -897,6 +897,7 @@ class Database
 
 end
 
+require 'net/ftp/list'
 class Connector
   class AuthenticationFailed < StandardError
   end
@@ -1252,6 +1253,36 @@ class Connector
       @port = 445
     end
 
+    def list_items(lines)
+      items = []
+      lines[0..(lines.length - 2)].each { |line|
+        next if line !~ /^\s{2}\S+/
+        next if line =~ /^\s{2}\.+/
+
+        words = line.split(' ')
+        next if words.length > 7 and words[(words.length - 7)].split('').include?('D')
+
+        def getcolumn(file)
+          if file[file.length-7]=='A' # checks whether listing contains marking for datatype
+            file[0...(file.length-7)].join(" ")
+          else
+            file[0...(file.length-6)].join(" ")
+          end
+        end
+
+        file  = getcolumn(words)
+        size  = words[(words.length - 6)]
+        mtime = Time.at(Time.parse((words[(words.length - 5)..(words.length - 1)]).join(' ')).to_i).to_s
+
+        i = {}
+        i['name']  = file
+        i['size']  = size
+        i['mtime'] = mtime
+        items << i
+      }
+      items
+    end
+
     def connect
       begin
         @rand  = Digest::MD5.hexdigest("#{@address}_#{@port}_#{@share}_#{@login}" + rand(Time.now().to_i).to_s)
@@ -1553,33 +1584,7 @@ class Connector
           lines << out
         }
 
-        items = []
-        lines[0..(lines.length - 2)].each { |line|
-          next if line !~ /^\s{2}\S+/
-          next if line =~ /^\s{2}\.+/
-
-          words = line.split(' ')
-          next if words.length > 7 and words[(words.length - 7)].split('').include?('D')
-
-          def getcolumn(file)
-            if file[file.length-7]=='A' # checks whether listing contains marking for datatype
-              file[0...(file.length-7)].join(" ")
-            else
-              file[0..(file.length-6)].join(" ")
-            end
-          end
-
-          file  = getcolumn(words)
-          size  = words[(words.length - 6)]
-          mtime = Time.at(Time.parse((words[(words.length - 5)..(words.length - 1)]).join(' ')).to_i).to_s
-
-          i = {}
-          i['name']  = file
-          i['size']  = size
-          i['mtime'] = mtime
-          items << i
-        }
-
+        items = list_items(lines)
         return items.sort { |a, b| a['name'] <=> b['name'] }
       rescue
         raise Connector::AuthenticationFailed, "login refused by '#{@address}'"            if $!.message =~ /NT_STATUS_LOGON_FAILURE/

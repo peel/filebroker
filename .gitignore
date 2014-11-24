@@ -19,3 +19,4 @@ doc/
 .idea/*
 *.ipr
 *.iws
+*.iml
