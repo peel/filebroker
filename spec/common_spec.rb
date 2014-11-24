@@ -15,7 +15,7 @@ describe Connector::CIFS, '#getcolumn' do
   end
 
   it "returns filename for files on shares NOT adding 'A' column" do
-    lines=['  Przelewy_Przyszle_przelewy_zdefiniowane_z_harmonogramem_T24_20141115_115348_1_1.TXT           12742  Sat Nov 15 11:53:48 2014']
+    lines=['  Przelewy_Przyszle_przelewy_zdefiniowane_z_harmonogramem_T24_20141115_115348_1_1.TXT              0  Mon Nov 24 14:20:04 2014']
     cifs = Connector::CIFS.new
     expect(cifs.list_items(lines).first['name']).to eq 'Przelewy_Przyszle_przelewy_zdefiniowane_z_harmonogramem_T24_20141115_115348_1_1.TXT'
   end
