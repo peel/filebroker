@@ -3,6 +3,7 @@
 # (c) 2010-2013 Jakub Zubielik <jakub.zubielik@nordea.com>
 #
 
+require 'parser_functions'
 class FBService < Sinatra::Base
   # File status
   FAILED_TO_ARCHIVE_FILE				= 1
@@ -944,8 +945,8 @@ class FBService < Sinatra::Base
                 err.puts $!.message.to_s
                 @db.update_file_status(transfer_id, file, FBService::FAILED_TO_UPLOAD_FILE, DateTime.now)
                 File.unlink("process/#{transfer['transfer_id']}/#{file}") if File.exist?("process/#{transfer['transfer_id']}/#{file}")
-                files_remove.delete_if { |t| t == file }
-                files_remove.delete_if { |t| t == file.gsub(/\.gpg/, '') }
+                parser = FilenameParser.new
+                parser.match_file_and_encrypted(files_remove,file).each delete
                 next
               end
             }
@@ -1365,3 +1366,6 @@ class FBService < Sinatra::Base
     end
   end
 end
+
+
+
