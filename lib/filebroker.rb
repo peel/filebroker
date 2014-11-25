@@ -3,7 +3,7 @@
 # (c) 2010-2013 Jakub Zubielik <jakub.zubielik@nordea.com>
 #
 
-require 'parser_functions'
+require './parser_functions'
 class FBService < Sinatra::Base
   # File status
   FAILED_TO_ARCHIVE_FILE				= 1
