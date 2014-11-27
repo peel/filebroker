@@ -1244,6 +1244,10 @@ class Connector
     end
   end
 
+  require_relative '../lib/cifs/filename_parser'
+  require_relative '../lib/cifs/operator'
+  require_relative '../lib/cifs/commands/commands'
+  require_relative '../lib/cifs/connector_message_handler'
   class CIFS
     attr_accessor :address, :port, :login, :password, :share, :debug
 
@@ -1448,15 +1452,14 @@ class Connector
         File.open(@authfile, 'w', 0600) { |fd| fd.puts "username = #{@login}\npassword = #{@password}\n" }
         STDERR.puts "->removing #{file}" if @debug
 
-        def remove_command(file)
-          operator = CIFSCommands.new(CIFSUriParser.new)
-          operator.connect_and_remove(file,@authfile,@port,@address,@share)
-        end
+        handler = ConnectorMessageHandler.new(@address,path,file)
+        env = CIFSConfig(@address,@port,@share,@authfile)
+        handler = ConnectorMessageHandler.new(@address,path,file)
+        uri_parser=CIFSUriParser.new
+        operator = CIFSOperator.new(handler,uri_parser,env)
 
-        @sys.exec(remove_command(file)).split("\n").each { |out|
-          handler = ConnectorMessageHandler.new(@address,path,file)
-          handler.handle_message(out)
-        }
+        operator.remove(file)
+
       ensure
         File.delete(@authfile) if File.exist?(@authfile)
       end

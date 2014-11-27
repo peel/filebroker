@@ -1,5 +1,5 @@
 require 'rspec'
-require './lib/common'
+require_relative '../lib/common'
 
 describe Connector::CIFS, '#getcolumn' do
   it "returns filename for large files" do

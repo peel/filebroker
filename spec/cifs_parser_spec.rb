@@ -1,5 +1,5 @@
 require 'rspec'
-require './lib/file_functions'
+require_relative '../lib/cifs/uri_parser'
 
 describe CIFSUriParser do
   uri = '/aa/bb/cc/dd/ee.txt'

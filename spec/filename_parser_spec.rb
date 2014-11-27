@@ -1,5 +1,5 @@
 require 'rspec'
-require './lib/file_functions'
+require_relative '../lib/cifs/filename_parser'
 
 describe FilenameParser, '#is_an_encryption' do
   it "checks if file is encrypted version of given filename" do

@@ -1,8 +1,8 @@
-#
-# FileBroker - FileBrokerService
+ FileBroker - FileBrokerService
 # (c) 2010-2013 Jakub Zubielik <jakub.zubielik@nordea.com>
 #
 
+require_relative 'cifs/filename_parser'
 require_relative 'file_functions'
 class FBService < Sinatra::Base
   # File status

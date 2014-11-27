@@ -1,4 +1,4 @@
-require_relative 'common'
+require_relative '../common'
 
 class ConnectorMessageHandler
   attr_accessor :address,:path,:file
@@ -27,17 +27,4 @@ class ConnectorMessageHandler
     raise Connector::PermissionDenied, "unknown error '#{message}'"                        if message =~ /session setup failed/
     raise Connector::PermissionDenied, "permission denied for file '#{path}'"          if message =~ /not a directory/
   end
-
-  def action
-    puts 'aaa'
-  end
-  def retry(message,action)
-    begin
-      action
-      raise Connector::ConnectionRefused
-    ensure
-      puts 'bbb'
-    end
-  end
-
 end

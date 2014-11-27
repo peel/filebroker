@@ -1,7 +1,7 @@
 require 'rspec'
 require 'rspec-parameterized'
 require_relative '../lib/common'
-require_relative '../lib/connector_message_handler'
+require_relative '../lib/cifs/connector_message_handler'
 
 describe ConnectorMessageHandler, '#handle_message' do
   address = 'cifs-01.nas-01-int.pld2.root4.net'
@@ -33,10 +33,5 @@ describe ConnectorMessageHandler, '#handle_message' do
       handler = ConnectorMessageHandler.new(address,path,file)
       expect{handler.handle_message(message)}.to raise_error(response)
     end
-  end
-
-  it 'should raise specific error for an exception' do
-    handler = ConnectorMessageHandler.new(address,path,file)
-    expect{handler.retry(nil,handler.action)}.to raise_error(Connector::ConnectionRefused)
   end
 end
