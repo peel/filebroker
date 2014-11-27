@@ -1448,49 +1448,15 @@ class Connector
         File.open(@authfile, 'w', 0600) { |fd| fd.puts "username = #{@login}\npassword = #{@password}\n" }
         STDERR.puts "->removing #{file}" if @debug
 
-        cmd = ''
-        file.split('/')[0...-1].each { |item|
-          next if item == ''
-          next if item == file.split('/')[1] # share
-          cmd = cmd + "cd \\\"#{item}\\\"\n"
-        }
+        def remove_command(file)
+          operator = CIFSCommands.new(CIFSUriParser.new)
+          operator.connect_and_remove(file,@authfile,@port,@address,@share)
+        end
 
-        cmd = cmd + "rm \\\"#{file.split('/').last}\\\"\n"
-        @sys.exec("echo \"#{cmd}\" | smbclient -E -g -A #{@authfile} -p #{@port} //#{@address}/#{@share} 2>&1").split("\n").each { |out|
-          raise Connector::AuthenticationFailed, "login refused by '#{@address}'"            if out =~ /NT_STATUS_LOGON_FAILURE/
-          raise Connector::AuthenticationFailed, "login refused by '#{@address}'"            if out =~ /NT_STATUS_ACCESS_DENIED/
-          raise Connector::HostUnreachable, "host unreachable '#{@address}'"                 if out =~ /NT_STATUS_UNSUCCESSFUL/
-          raise Connector::HostUnreachable, "host unreachable '#{@address}'"                 if out =~ /NT_STATUS_HOST_UNREACHABLE/
-          raise Connector::BadNetworkName, "bad network name '#{@address}'"                  if out =~ /NT_STATUS_BAD_NETWORK_NAME/
-          raise Connector::NetworkUnreachable, "network unreachable '#{@address}'"           if out =~ /NT_STATUS_NETWORK_UNREACHABLE/
-          raise Connector::ConnectionRefused, "connection refused by '#{@address}'"          if out =~ /NT_STATUS_CONNECTION_REFUSED/
-          raise Connector::ConnectionRefused, "connection refused by '#{@address}'"          if out =~ /Receiving SMB: Server \S+ stopped responding/
-          raise Connector::NoSuchFileOrDirectory, "cannot open file or directory '#{file}'"  if out =~ /NT_STATUS_OBJECT_(NAME|PATH)_NOT_FOUND/
-          raise Connector::NoSuchFileOrDirectory, "cannot open file or directory '#{file}'"  if out =~ /NT_STATUS_NO_SUCH_FILE/
-          raise Connector::PermissionDenied, "permission denied for file '#{file}'"          if out =~ /NT_STATUS_ACCESS_DENIED/
-          raise Connector::PermissionDenied, "permission denied for file '#{file}'"          if out =~ /NT_STATUS_CANNOT_DELETE/
-          raise Connector::PermissionDenied, "permission denied for file '#{path}'"          if out =~ /NT_STATUS_ACCOUNT_DISABLED/
-          raise Connector::PermissionDenied, "permission denied for file '#{path}'"          if out =~ /NT_STATUS_ACCOUNT_LOCKED/
-          raise Connector::PermissionDenied, "unknown error '#{out}'"                        if out =~ /session setup failed/
-          raise Connector::PermissionDenied, "permission denied for file '#{path}'"          if out =~ /not a directory/
+        @sys.exec(remove_command(file)).split("\n").each { |out|
+          handler = ConnectorMessageHandler.new(@address,path,file)
+          handler.handle_message(out)
         }
-      rescue
-        raise Connector::AuthenticationFailed, "login refused by '#{@address}'"            if $!.message =~ /NT_STATUS_LOGON_FAILURE/
-        raise Connector::AuthenticationFailed, "login refused by '#{@address}'"            if $!.message =~ /NT_STATUS_ACCESS_DENIED/
-        raise Connector::HostUnreachable, "host unreachable '#{@address}'"                 if $!.message =~ /NT_STATUS_UNSUCCESSFUL/
-        raise Connector::HostUnreachable, "host unreachable '#{@address}'"                 if $!.message =~ /NT_STATUS_HOST_UNREACHABLE/
-        raise Connector::BadNetworkName, "bad network name '#{@address}'"                  if $!.message =~ /NT_STATUS_BAD_NETWORK_NAME/
-        raise Connector::NetworkUnreachable, "network unreachable '#{@address}'"           if $!.message =~ /NT_STATUS_NETWORK_UNREACHABLE/
-        raise Connector::ConnectionRefused, "connection refused by '#{@address}'"          if $!.message =~ /NT_STATUS_CONNECTION_REFUSED/
-        raise Connector::ConnectionRefused, "connection refused by '#{@address}'"          if $!.message =~ /Receiving SMB: Server \S+ stopped responding/
-        raise Connector::NoSuchFileOrDirectory, "cannot open file or directory '#{file}'"  if $!.message =~ /NT_STATUS_OBJECT_(NAME|PATH)_NOT_FOUND/
-        raise Connector::NoSuchFileOrDirectory, "cannot open file or directory '#{file}'"  if $!.message =~ /NT_STATUS_NO_SUCH_FILE/
-        raise Connector::PermissionDenied, "permission denied for file '#{file}'"          if $!.message =~ /NT_STATUS_ACCESS_DENIED/
-        raise Connector::PermissionDenied, "permission denied for file '#{file}'"          if $!.message =~ /NT_STATUS_CANNOT_DELETE/
-        raise Connector::PermissionDenied, "permission denied for file '#{path}'"          if $!.message =~ /NT_STATUS_ACCOUNT_DISABLED/
-        raise Connector::PermissionDenied, "permission denied for file '#{path}'"          if $!.message =~ /NT_STATUS_ACCOUNT_LOCKED/
-        raise Connector::PermissionDenied, "permission denied for file '#{path}'"          if $!.message =~ /not a directory/
-        raise $!
       ensure
         File.delete(@authfile) if File.exist?(@authfile)
       end
