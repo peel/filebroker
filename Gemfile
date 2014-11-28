@@ -19,3 +19,5 @@ gem 'sinatra', '= 1.4.5'
 gem 'xml-simple', '= 1.1.3'
 gem 'rspec'
 gem 'rspec-parameterized'
+gem 'rake-rspec'
+
