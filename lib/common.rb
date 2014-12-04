@@ -1248,6 +1248,7 @@ class Connector
   require_relative '../lib/cifs/operator'
   require_relative '../lib/cifs/commands/commands'
   require_relative '../lib/cifs/connector_message_handler'
+  require 'fbcifs'
   class CIFS
     attr_accessor :address, :port, :login, :password, :share, :debug
 
@@ -1448,21 +1449,29 @@ class Connector
     end
 
     def remove(file)
-      begin
-        File.open(@authfile, 'w', 0600) { |fd| fd.puts "username = #{@login}\npassword = #{@password}\n" }
-        STDERR.puts "->removing #{file}" if @debug
+      STDERR.puts "->removing #{file}" if @debug
+      make_credentials_file(@authfile,@username,@password)
+      try_to_remove(file)
+      drop_credentials_file(@authfile)
 
-        handler = ConnectorMessageHandler.new(@address,path,file)
-        env = CIFSConfig(@address,@port,@share,@authfile)
-        handler = ConnectorMessageHandler.new(@address,path,file)
-        uri_parser=CIFSUriParser.new
-        operator = CIFSOperator.new(handler,uri_parser,env)
-
-        operator.remove(file)
-
-      ensure
+      def make_credentials_file(authfile,login,password)
+        File.open(authfile 'w', 0600) { |fd| fd.puts "username = #{login}\npassword = #{password}\n" }
+      end
+      def drop_credentials_file(authfile)
         File.delete(@authfile) if File.exist?(@authfile)
       end
+
+      def try_to_remove(file)
+        begin
+          tries||=3
+          env = Fbcifs::CIFSConfig(@address,@port,@share,@username, @password)
+          operator = Fbcifs::Operator.new(env)
+          operator.remove(file)
+        rescue Fbcifs::ConnectionRefused
+          retry unless (tries-=1).zero?
+        end
+      end
+
     end
 
     def rename(src, dst)
