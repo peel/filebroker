@@ -1449,19 +1449,12 @@ class Connector
 
     def remove(file)
       begin
-        File.open(@authfile, 'w', 0600) { |fd| fd.puts "username = #{@login}\npassword = #{@password}\n" }
-        STDERR.puts "->removing #{file}" if @debug
-
-        handler = ConnectorMessageHandler.new(@address,path,file)
-        env = CIFSConfig(@address,@port,@share,@authfile)
-        handler = ConnectorMessageHandler.new(@address,path,file)
-        uri_parser=CIFSUriParser.new
-        operator = CIFSOperator.new(handler,uri_parser,env)
-
+        tries||=3
+        env = Fbcifs::CIFSConfig(@address,@port,@share,@username, @password)
+        operator = Fbcifs::Operator.new(env)
         operator.remove(file)
-
-      ensure
-        File.delete(@authfile) if File.exist?(@authfile)
+      rescue Fbcifs::ConnectionRefused
+        retry unless (tries-=1).zero?
       end
     end
 
