@@ -25,5 +25,17 @@ describe Connector::CIFS, '#getcolumn' do
     cifs = Connector::CIFS.new
     expect(cifs.list_items(lines).first['name']).to eq 'R0_MN_20141022_211940213123123312313248923489234.csv'
   end
-
 end
+
+describe Connector::CIFS, '#remove' do
+  it "should try to remove three times" do
+    operator = double(Fbcifs::Operator)
+    allow(operator).to receive(:remove) { raise Fbcifs::ConnectionRefused}
+    cifs = Connector::CIFS.new
+
+    cifs.try_remove(operator, '/aaaa/bbb/ccc')
+
+    expect(operator).to have_received(:remove).exactly(3).times
+  end
+end
+

@@ -20,4 +20,5 @@ gem 'xml-simple', '= 1.1.3'
 gem 'rspec'
 gem 'rspec-parameterized'
 gem 'rake-rspec'
+gem 'fbcifs'
 

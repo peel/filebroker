@@ -1244,10 +1244,8 @@ class Connector
     end
   end
 
-  require_relative '../lib/cifs/filename_parser'
-  require_relative '../lib/cifs/operator'
-  require_relative '../lib/cifs/commands/commands'
-  require_relative '../lib/cifs/connector_message_handler'
+  require 'fbcifs'
+
   class CIFS
     attr_accessor :address, :port, :login, :password, :share, :debug
 
@@ -1255,6 +1253,15 @@ class Connector
       @debug = false
       @sys = System.new
       @port = 445
+    end
+
+    def config(address, port, share, username, password)
+      credentials = Fbcifs::Credentials.new(username, password)
+      Fbcifs::CIFS.new(address, port, share,credentials)
+    end
+
+     def operator(env)
+      Fbcifs::Operator.new(env)
     end
 
     def list_items(lines)
@@ -1447,16 +1454,21 @@ class Connector
       end
     end
 
-    def remove(file)
+    def try_remove(operator,file)
       begin
         tries||=3
-        env = Fbcifs::CIFSConfig(@address,@port,@share,@username, @password)
-        operator = Fbcifs::Operator.new(env)
         operator.remove(file)
       rescue Fbcifs::ConnectionRefused
         retry unless (tries-=1).zero?
       end
     end
+
+    def remove(file)
+      env = config(address, port, share, username, password)
+      operator = operator(env)
+      try_remove(operator,file)
+    end
+
 
     def rename(src, dst)
       begin
